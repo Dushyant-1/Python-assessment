@@ -2,33 +2,42 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = 'dushyant05/my-flask-app'
-        DOCKER_CREDENTIALS_ID = 'dockerhub-creds'  
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub-creds')  // Your Docker Hub credentials in Jenkins
+        IMAGE_NAME = 'dushyant05/my-flask-app'  // Your Docker Hub repo name
     }
 
     stages {
         stage('Clone Repository') {
             steps {
-                git 'https://github.com/Dushyant-1/Python-assessment.git'
+                git branch: 'main', url: 'https://github.com/Dushyant-1/Python-assessment.git'  // Your GitHub repo URL
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                script {
-                    docker.build(DOCKER_IMAGE)
-                }
+                bat "docker build -t %IMAGE_NAME% ."  // Build the Docker image
             }
         }
 
-        stage('Push to Docker Hub') {
+        stage('Login to Docker Hub') {
             steps {
-                script {
-                    docker.withRegistry('https://index.docker.io/v1/', DOCKER_CREDENTIALS_ID) {
-                        docker.image(DOCKER_IMAGE).push('latest')
-                    }
-                }
+                bat "echo %DOCKERHUB_CREDENTIALS_PSW% | docker login -u %DOCKERHUB_CREDENTIALS_USR% --password-stdin"  // Docker login command
             }
+        }
+
+        stage('Push Image to Docker Hub') {
+            steps {
+                bat "docker push %IMAGE_NAME%"  // Push the Docker image to Docker Hub
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Docker image built and pushed successfully!'  // Success message
+        }
+        failure {
+            echo 'Pipeline failed.'  // Failure message
         }
     }
 }
